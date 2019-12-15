@@ -5,6 +5,13 @@ Change profiles for GitHub Desktop
 Change login profiles for GitHub Desktop to allow for different accounts.
 .NOTES
 The profiles are swapped by utilizing symbolic directory links to different named profile folders.
+
+If this is the first type running this, create a new profile using:
+    .\SwapGitHubProfile.ps1 -Profile <ProfileName> -New
+The existing profile will be copied to a profile entitled 'Default'.
+
+If you ever need to remove a profile from the list, make sure it is not the active profile and
+delete the folder.
 .EXAMPLE
 .\SwapGitHubProfile.ps1
 Will swap between profile if there are only 2 profiles available
@@ -74,27 +81,47 @@ Begin {
 
         $ThisProfile = Get-Item $Path
         $ThisProfile | Add-Member -MemberType NoteProperty -Name ConfigFile "$($ThisProfile.FullName)\$ConfigFile"
-        $ThisProfile | Add-Member -MemberType ScriptProperty -Name Config -Value { Get-Content $This.ConfigFile -Raw | ConvertFrom-Json }
+        $ThisProfile | Add-Member -MemberType NoteProperty -Name Config -Value (NewGitHubConfigJson)
         $ThisProfile | Add-Member -MemberType ScriptProperty -Name ProfileName -Value { $this.Config.Profile }
+        $ThisProfile | Add-Member -MemberType ScriptMethod -Name ReloadConfig -Value {
+            If (Test-Path $This.ConfigFile) { 
+                $this.Config = Get-Content $This.ConfigFile -Raw | ConvertFrom-Json
+            }
+        }
         $ThisProfile | Add-Member -MemberType ScriptMethod -Name SaveConfig -Value { $this.Config | ConvertTo-Json | Set-Content $This.ConfigFile }
         $ThisProfile | Add-Member -MemberType ScriptMethod -Name UpdateConfig -Value {
             $This.Config.Name = &$GitExe config --global --get user.name
             $This.Config.PublicEmail = &$GitExe config --global --get user.email
         }
+
+        $ThisProfile.ReloadConfig()
+
         If ($Current) {
             $ProfileName = $ThisProfile.ProfileName
         } elseIf ($NewProfile) {
             $ThisProfile.Config.Profile = $ProfileName
+            If (-not $ThisProfile.Config.Name) { $ThisProfile.UpdateConfig() }
             $ThisProfile.SaveConfig()
         }
         return $ThisProfile | Where-Object { $_.ProfileName -eq $ProfileName }
     }
 
+    Function NewGitHubConfigJson {
+        param([string]$ProfileName,
+            [string]$Path)
+
+        return @{
+            "Profile" = $ProfileName
+            "Name" = ""
+            "PublicEmail" = ""
+        }
+    }
     Function NewGitHubProfile {
         Param([string]$ProfileName = $Profile,
             [string]$SourceProfile = "$ProfilePath\$ProfilePrefix")
 
         $NewProfilePath = "$SourceProfile-$ProfileName"
+
         Copy-Item $SourceProfile $NewProfilePath
         $NewProfile = NewProfileObj -ProfileName $ProfileName -Path $NewProfilePath -NewProfile
 
@@ -114,14 +141,22 @@ Begin {
             }
         }
 
+        If (-not $PossibleProfiles) {
+            Write-Host "First implementation. Saving current profile as [Default]." -ForegroundColor DarkCyan
+            If (-not $CurrentProfile.Config.Profile) { $CurrentProfile.Config.Profile = "Default" }
+            Move-Item $CurrentProfile.FullName "$($CurrentProfile.FullName)-Default"
+            cmd.exe /c mklink /D "$($CurrentProfile.FullName)" "$($CurrentProfile.FullName)-Default"
+        }
         Write-Host "Saving existing config of [$($CurrentProfile.Config.Profile)]..."
         $ProfilePath = $CurrentProfile.FullName
         $CurrentProfile.UpdateConfig()
         $CurrentProfile.SaveConfig()
         $global:PrevProfile = $CurrentProfile
 
-        Write-Host "Remove existing link at [$ProfilePath]" -ForegroundColor DarkRed -BackgroundColor Black
-        cmd.exe /c rd "$ProfilePath"
+        if (Test-Path $ProfilePath) {
+            Write-Host "Remove existing link at [$ProfilePath]" -ForegroundColor DarkRed -BackgroundColor Black
+            cmd.exe /c rd "$ProfilePath"
+        }
         Write-Host "Make new link from [$($NewProfile.FullName)]" -ForegroundColor DarkGreen -BackgroundColor Black
         cmd.exe /c mklink /D "$ProfilePath" "$($NewProfile.FullName)"
         &$GitExe config --global --replace-all user.name $NewProfile.Config.Name
@@ -162,6 +197,8 @@ Process {
                     Write-Error "Could not find a profile [$Profile]"
                 }
             }
+        } else {
+            Write-Host "No profile specified." -ForegroundColor Yellow
         }
     }
 }
