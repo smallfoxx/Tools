@@ -5,27 +5,38 @@ Change profiles for GitHub Desktop
 Change login profiles for GitHub Desktop to allow for different accounts.
 .NOTES
 The profiles are swapped by utilizing symbolic directory links to different named profile folders.
+.EXAMPLE
+.\SwapGitHubProfile.ps1
+Will swap between profile if there are only 2 profiles available
+.EXAMPLE
+.\SwapGitHubProfile.ps1 -Profile MyCorp
+Change active profile from current to one named 'MyCorp'
+.EXAMPLE
+.\SwapGitHubProfile.ps1 -Profile Newbie -New
+Copies the current profile to a new directory suffixed with '-Newbie' and switches to it
+.EXAMPLE
+.\SwapGitHubProfile.ps1 -ListAvailable
+List currently available profiles
 .LINK
 mklink.exe
 https://desktop.github.com/
 #>
 [Cmdletbinding(DefaultParameterSetName="Swap")]
 Param(
-    [Parameter(Position=0)]
+    [Parameter(Position=0,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true)]
     #The name of the profile to switch to
     [string]$Profile,
 
-    [Parameter(Position=1)]
-    #Name of the configuration file used to store details about the profile
-    [string]$ConfigFile = "AccountDetails.json",
-
-    [Parameter(Position=2)]
+    [Parameter(Position=1,ValueFromPipelineByPropertyName=$true)]
     #Parent directory where profiles are found
     [String]$ProfilePath = "$env:USERPROFILE\AppData\Roaming",
 
-    [Parameter(Position=3)]
     #Beginning of the profile direcotry (appended with '-' and the name of the profile)
     [string]$ProfilePrefix = "GitHub Desktop",
+
+    [Parameter()]
+    #Name of the configuration file used to store details about the profile
+    [string]$ConfigFile = "AccountDetails.json",
 
     [parameter(ParameterSetName="Swap")]
     #Current version of GIT
@@ -132,7 +143,7 @@ Begin {
 
 Process {
     If ($PSCmdlet.ParameterSetName -eq 'ListProfiles') {
-        $PossibleProfiles.ProfileName | Where-Object{ $_ -match $Profile }
+        $PossibleProfiles | Select-Object ProfileName,FullName
     } else {
         If (-not $Profile -and $PossibleProfiles.Count -eq 2) {
             $Profile = $PossibleProfiles.ProfileName | Where-Object { $_ -ne $CurrentProfile.ProfileName } | Select-Object -First 1
