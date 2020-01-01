@@ -1,3 +1,19 @@
+<#
+.SYNOPSIS
+Shuts down a VM in Azure and minize resources at rest.
+.DESCRIPTION
+Deallocates an Azure VM, remove an public IP addresses, and drop its disks down to Standard HDD disks to
+minimize its costs while at rest.
+.EXAMPLE
+PS> .\MinimizeVM.ps1 -VMName 'MyVM'
+This will look for the MyVM and stop it if its running, looks for any public IP addresses & removes them,
+and make sure the disks are Standard HDD types.
+.LINK
+Stop-AzVM
+New-AzVM
+ConnectJumpVM.ps1
+#>
+[Cmdletbinding()]
 param(
     [parameter(ValueFromPipelineByPropertyName=$true,Position=1)]
     [Alias('Name')]

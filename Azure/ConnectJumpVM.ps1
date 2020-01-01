@@ -9,6 +9,8 @@ PS> .\ConnectJumpVM.ps1 -VMName 'MyVM' -Create -PublicIP -PremiumDisk
 This will look for the MyVM and create it if it doesn't already exist, looks for its public IP address,
 and make sure the disks are Premium SSD types.
 .LINK
+Start-AzVM
+New-AzVM
 Minimize.ps1
 #>
 [Cmdletbinding()]
