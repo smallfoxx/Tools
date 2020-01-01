@@ -1,6 +1,15 @@
 <#
 .SYNOPSIS
-Startup a VM in Azure and start MSTSC
+Startup a VM in Azure and call MSTSC to connect to it
+.DESCRIPTION
+Start a VM, find its IP address, and call MSTSC to connect to it. Optional flags will also cause the VM
+and its resources to be created if it doesn't exist and change its size & disk type.
+.EXAMPLE
+PS> .\ConnectJumpVM.ps1 -VMName 'MyVM' -Create -PublicIP -PremiumDisk
+This will look for the MyVM and create it if it doesn't already exist, looks for its public IP address,
+and make sure the disks are Premium SSD types.
+.LINK
+Minimize.ps1
 #>
 [Cmdletbinding()]
 Param(
@@ -102,12 +111,11 @@ Begin {
             Write-Host "Creating virtual network [$VirtualNetworkName]..."
             $VNet = New-AzVirtualNetwork -Name $VirtualNetworkName -ResourceGroupName $VNetRG.ResourceGroupName `
                 -Location $VNetRG.Location -AddressPrefix $VirtualNetowrkAddressRange 
-            #$Subnet = Add-AzVirtualNetworkSubnetConfig -Name $SubnetName -VirtualNetwork $VNet -AddressPrefix $SubnetAddressMask
         }
 
         If (-not ($Vnet.Subnets | Where-Object { $_.Name -eq $SubnetName})) {
             Write-Host "Adding subnet [$SubnetName]..."
-            $Subnet = Add-AzVirtualNetworkSubnetConfig -Name $SubnetName -VirtualNetwork $Vnet -AddressPrefix $SubnetAddressMask
+            Add-AzVirtualNetworkSubnetConfig -Name $SubnetName -VirtualNetwork $Vnet -AddressPrefix $SubnetAddressMask | Out-Null
             $VNet = $VNet | Set-AzVirtualNetwork
         }
 
@@ -144,7 +152,7 @@ Begin {
         $VMConfig = Set-AzVMSourceImage -VM $VMConfig -PublisherName 'MicrosoftWindowsDesktop' -Offer 'windows-10' -Skus '19h2-pro' -Version latest
 
         Write-Host "Creating actual VM..."
-        $NewVM = New-AzVM -ResourceGroupName $ResourceGroup.ResourceGroupName -Location $ResourceGroup.Location -VM $VMConfig -Verbose 
+        New-AzVM -ResourceGroupName $ResourceGroup.ResourceGroupName -Location $ResourceGroup.Location -VM $VMConfig -Verbose | Out-Null
         <#
         $VMParams = @{
             'ResourceGroupName' = $ResourceGroup.ResourceGroupName 
