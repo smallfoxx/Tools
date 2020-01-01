@@ -87,29 +87,33 @@ Begin {
                 throw "Azure region not specified. Must specify region when creating new resource group."
                 break
             }
+            Write-Host "Creating resource group [$ResourceGroupName]"
             $ResourceGroup = New-AzResourceGroup -Name $ResourceGroupName -Location $AzureRegion
         }
 
         $VNetRG = Get-AzResourceGroup -Name $VirtualNetowrkRG -ErrorAction Ignore
         If (-not $VNetRG) {
+            Write-Host "Creating resource group [$VirtualNetowrkRG]"
             $VNetRG = New-AzResourceGroup -Name $VirtualNetowrkRG -Location $AzureRegion
         }
         
         $VNet = Get-AzVirtualNetwork -Name $VirtualNetworkName -ResourceGroupName $VNetRG.ResourceGroupName -ErrorAction Ignore
         If (-not $Vnet) {
+            Write-Host "Creating virtual network [$VirtualNetworkName]..."
             $VNet = New-AzVirtualNetwork -Name $VirtualNetworkName -ResourceGroupName $VNetRG.ResourceGroupName `
-                -Location $VNetRG.Location -AddressPrefix $VirtualNetowrkAddressRange #-Subnet $SubnetName
-            #If ($VirtualNetowrkAddressRange -ne $SubnetAddressMask) {
-                $Subnet = Add-AzVirtualNetworkSubnetConfig -Name $SubnetName -VirtualNetwork $VNet -AddressPrefix $SubnetAddressMask
-            #}
+                -Location $VNetRG.Location -AddressPrefix $VirtualNetowrkAddressRange 
+            #$Subnet = Add-AzVirtualNetworkSubnetConfig -Name $SubnetName -VirtualNetwork $VNet -AddressPrefix $SubnetAddressMask
         }
 
         If (-not ($Vnet.Subnets | Where-Object { $_.Name -eq $SubnetName})) {
+            Write-Host "Adding subnet [$SubnetName]..."
             $Subnet = Add-AzVirtualNetworkSubnetConfig -Name $SubnetName -VirtualNetwork $Vnet -AddressPrefix $SubnetAddressMask
+            $VNet = $VNet | Set-AzVirtualNetwork
         }
 
         $NSG = Get-AzNetworkSecurityGroup | Where-Object { $_.Name -eq $NetworkSecurityGroup } | Select-Object -First 1
         If (-not $NSG) {
+            Write-Host "Creating NSG [$NetworkSecurityGroup]..."
             $NSGRules = @((New-AzNetworkSecurityRuleConfig -Protocol Tcp -Name 'Allow-RDP' `
                             -SourcePortRange * -SourceAddressPrefix * `
                             -DestinationPortRange 3389 -DestinationAddressPrefix 'VirtualNetwork' `
@@ -123,7 +127,25 @@ Begin {
         } elseif ($Size -notlike "Standard_*") {
             $Size = "Standard_$Size"
         }
-        
+
+        Write-Host "Creating actual VM's resources..."
+        $NIC = New-AzNetworkInterface -Name ("{0}-{1:00000}" -f $VMName,(Get-Random -Minimum 100 -Maximum 10000)) `
+            -ResourceGroupName $ResourceGroup.ResourceGroupName -Location $ResourceGroup.Location `
+            -SubnetId (($Vnet.Subnets | Where-Object { $_.Name -eq $SubnetName}).Id)
+
+        $VMConfig = New-AzVMConfig -VMName $VMName -VMSize $Size 
+        If ($Credential) {
+            $VMConfig = Set-AzVMOperatingSystem -VM $VMConfig -Windows -ComputerName $VMName -Credential $Credential -ProvisionVMAgent -EnableAutoUpdate
+        } else {
+            $VMConfig = Set-AzVMOperatingSystem -VM $VMConfig -Windows -ComputerName $VMName -ProvisionVMAgent -EnableAutoUpdate `
+                -Credential (Get-Credential -UserName $env:USERNAME -Message "Enter username and password to use for local admin of new VM")
+        }
+        $VMConfig = Add-AzVMNetworkInterface -VM $VMConfig -Id $NIC.Id
+        $VMConfig = Set-AzVMSourceImage -VM $VMConfig -PublisherName 'MicrosoftWindowsDesktop' -Offer 'windows-10' -Skus '19h2-pro' -Version latest
+
+        Write-Host "Creating actual VM..."
+        $NewVM = New-AzVM -ResourceGroupName $ResourceGroup.ResourceGroupName -Location $ResourceGroup.Location -VM $VMConfig -Verbose 
+        <#
         $VMParams = @{
             'ResourceGroupName' = $ResourceGroup.ResourceGroupName 
             'Name' = $VMName
@@ -136,7 +158,9 @@ Begin {
         }
         If ($Credential) { $VMParams.Credential = $Credential}
 
-        $NewVM = New-AzVm @VMParams 
+        Write-Host "Creating actual VM..."
+        $NewVM = New-AzVm @VMParams
+        #> 
         Get-AzVm -ResourceGroupName $ResourceGroup.ResourceGroupName -Name $VMName
     }
 
@@ -247,6 +271,7 @@ Process {
             $VM = Get-AzVM  | Where-Object { $_.Name -eq $VMName } | Select-Object -First 1
         }
         If ($Create -and -not $VM) {
+            Write-Host "Creating VM [$VMName]..."
             $VM = CreateVM
         }
         If ($VM) {
