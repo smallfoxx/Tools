@@ -1,24 +1,31 @@
 if (Test-Path "$PSScriptRoot\Classes.psm1") {
     #this is to get the class definitions shared between modules
-    $script = [ScriptBlock]::Create("using module '$PSScriptRoot\Classes.psm1'")
-    . $script
+    $useBlock = [ScriptBlock]::Create("using module '$PSScriptRoot\Classes.psm1'")
+    . $useBlock
 }
 
-$AlphaTest = New-Object TestClass
+$AlphaSettings = New-Object cSettings
 
-Function GetAlpha {
-    Write-Host "Script TestThis: $script:TestThis"
-    Write-Host 'Alpha'
-    Write-Host "`tMyValue: $($AlphaTest.MyValue)"
-    Write-Host "`tTestThis: $($AlphaTest.TestThis)"
-    Write-Host 'Beta'
-    Write-Host "`tMyValue: $($BetaTest.MyValue)"
-    Write-Host "`tTestThis: $($BetaTest.TestThis)"
+Function Get-Alpha {
+    param([switch]$NoEcho)
+    If ($NoEcho) {
+        $AlphaSettings
+    } else {
+        Write-Host "Script Shared: $SharedValue"
+        Write-Host 'Alpha'
+        Write-Host "`tMyValue: $($AlphaSettings.MyValue)"
+        Write-Host "`tShared: $($AlphaSettings.SharedValue)"
+        Write-Host 'Beta'
+        Write-Host "`tMyValue: $($BetaSettings.MyValue)"
+        Write-Host "`tShared: $($BetaSettings.SharedValue)"
+    }
 }
 
-Function SetAlpha {
+Function Set-Alpha {
     param($Value)
 
-    $AlphaTest.MyValue = $Value
-    $AlphaTest.TestThis = $Value
+    $AlphaSettings.SharedValue = $Value
+    $AlphaSettings.MyValue = $Value
+    #$AlphaSettings.SharedValue = $Value
 }
+

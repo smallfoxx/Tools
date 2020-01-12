@@ -1,26 +1,35 @@
-$TestThis = 'I am testing this'
-Function GetClass {
-    Write-Host "Script TestThis: $script:TestThis"
-    Write-Host 'Alpha'
-    Write-Host "`tMyValue: $($AlphaTest.MyValue)"
-    Write-Host "`tTestThis: $($AlphaTest.TestThis)"
-    Write-Host 'Beta'
-    Write-Host "`tMyValue: $($BetaTest.MyValue)"
-    Write-Host "`tTestThis: $($BetaTest.TestThis)"
+$SharedValue = 'SharedValue between classes'
+Function Get-Class {
+    param([switch]$NoEcho)
+    If ($NoEcho) {
+        $script:SharedValue
+    } else {
+        Write-Host "Script Shared: $script:SharedValue"
+        Write-Host 'Alpha'
+        Write-Host "`tMyValue: $($AlphaSettings.MyValue)"
+        Write-Host "`tShared: $($AlphaSettings.SharedValue)"
+        Write-Host 'Beta'
+        Write-Host "`tMyValue: $($BetaSettings.MyValue)"
+        Write-Host "`tShared: $($BetaSettings.SharedValue)"
+    }
 }
-Function SetClass {
+Function Set-Class {
     Param($Value)
 
-    $script:TestThis = $Value
+    $script:SharedValue = $Value
 }
 #region Classes
-class TestClass {
+class cSettings {
 
     [string] $MyValue
 
-    TestClass () {
-        $this | Add-Member ScriptProperty TestThis { $script:TestThis } { $script:TestThis = $args[0] }
-        $this.MyValue = $script:TestThis
+    cSettings () {
+        $this | Add-Member ScriptProperty SharedValue { $script:SharedValue } { $script:SharedValue = $args[0] }
+        $this.MyValue = $script:SharedValue
+        $this | Add-Member ScriptProperty MyScriptValue { $this.MyValue } { $this.MyValue = $args[0] }
     }
+
+    [string] GetData () { return $script:SharedValue }
+    [void] SetData ($Value) { $script:SharedValue = $Value }
 
 }

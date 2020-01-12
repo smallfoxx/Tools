@@ -65,7 +65,7 @@
                    )
     
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-    FunctionsToExport = 'GetAlpha','SetAlpha','GetBeta','SetBeta','GetClass','SetClass'
+    FunctionsToExport = 'Get-Alpha','Set-Alpha','Get-Beta','Set-Beta','Get-Class','Set-Class'
     
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
     # CmdletsToExport = @()
@@ -97,13 +97,13 @@
             LicenseUri = 'https://github.com/smallfoxx/Tools/blob/master/LICENSE'
     
             # A URL to the main website for this project.
-            ProjectUri = 'https://github.com/smallfoxx/Tools/TestModule/'
+            ProjectUri = 'https://github.com/smallfoxx/Tools/TestModule/GlobalSettings/'
     
             # A URL to an icon representing this module.
             # IconUri = ''
     
             # ReleaseNotes of this module
-            ReleaseNotes = 'Just to test some things out'
+            ReleaseNotes = 'Example module with class of shared values.'
     
             # External dependent modules of this module
             # ExternalModuleDependencies = ''
