@@ -59,11 +59,11 @@
     
     # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
     NestedModules = @(
-                    'GLobalSettings\Alpha.psd1'
+                    'GlobalSettings\GlobalSettings.psd1'
                    )
     
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-    FunctionsToExport = 'GetAlpha','SetAlpha','GetBeta','SetBeta','GetClass','SetClass'
+    FunctionsToExport = 'Get-Alpha','Set-Alpha','Get-Beta','Set-Beta','Get-Class','Set-Class'
     
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
     # CmdletsToExport = @()
