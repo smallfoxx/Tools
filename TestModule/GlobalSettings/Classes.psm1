@@ -25,7 +25,7 @@ class cSettings {
 
     cSettings () {
         $this | Add-Member ScriptProperty SharedValue { $script:SharedValue } { $script:SharedValue = $args[0] }
-        $this.MyValue = $script:SharedValue
+        $this.MyValue = "My default value"
         $this | Add-Member ScriptProperty MyScriptValue { $this.MyValue } { $this.MyValue = $args[0] }
     }
 
