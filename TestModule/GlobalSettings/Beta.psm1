@@ -12,6 +12,7 @@ Function Get-Beta {
         $BetaSettings
     } else {
         Write-Host "Script Shared: $SharedValue"
+        Write-Host "Script Scope: $script:SharedValue"
         Write-Host 'Alpha'
         Write-Host "`tMyValue: $($AlphaSettings.MyValue)"
         Write-Host "`tShared: $($AlphaSettings.SharedValue)"
