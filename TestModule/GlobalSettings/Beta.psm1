@@ -19,6 +19,10 @@ Function Get-Beta {
         Write-Host 'Beta'
         Write-Host "`tMyValue: $($BetaSettings.MyValue)"
         Write-Host "`tShared: $($BetaSettings.SharedValue)"
+        Write-Host ''
+        ForEach ($var in (Get-Variable)) {
+            Write-Host "`t[$($var.Name)]: $($var.Value)"
+        }
     }
 }
 
