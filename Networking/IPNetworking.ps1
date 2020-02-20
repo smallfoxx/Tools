@@ -52,15 +52,32 @@ Class FullIP {
         }
         $this | Add-Member ScriptProperty CIDRMask -Value {
             if ($this.Mask) {
-                [int]([math]::Log($this.Mask.Address+1)/[math]::log(2))
+                ([convert]::ToString($this.Mask.Address,2) -replace "0","").length
             } 
-        } -SecondValue { if ($args[0]) { $this.Mask = [ipaddress][convert]::ToInt64(("1"*[int]$args[0]),2) } }
+        } -SecondValue { if ($args[0]) { $this.Mask = [ipaddress][convert]::ToInt64((Convert-CIDRToBitmask -CIDRMask $args[0]),2) } }
         $this | Add-Member ScriptProperty CIDR { if ($this.Mask) { "{0}/{1}" -f $this.Address.IPAddressToString,$this.CIDRMask } } { $this.Address = $args[0] }
         $this | Add-Member ScriptProperty NetworkAddress { if ($this.Mask) { [ipaddress]($this.IPv4Address.Address -band $this.Mask.Address) } }
-        $this | Add-Member ScriptProperty BroadcastAddress { if ($this.Mask) {  [ipaddress]($this.NetworkAddress.address + [convert]::ToInt64(("1"*(32-$this.CIDRMask)+"0"*$this.CIDRMask),2)) } } 
+        $this | Add-Member ScriptProperty BroadcastAddress { if ($this.Mask) {  [ipaddress]($this.NetworkAddress.address + [convert]::ToInt64((Convert-CIDRToBitmask -CIDRMask $this.CIDRMask -Invert).PadLeft(32,"1"),2)) } } 
         $this | Add-Member ScriptProperty NetworkAddressCount { if ($this.Mask) { [convert]::ToInt64("1"*(32-$this.CIDRMask),2)+1 } }
         $this | Add-Member ScriptProperty NetworkUsableCount { if ($this.Mask) { $this.NetworkAddressCount-2 } }
         $this | Add-Member ScriptProperty AzureUsableCount { if ($this.Mask) { $this.NetworkUsableCount-3 } }
+    }
+}
+
+Function Convert-CIDRToBitmask {
+    param([int]$CIDRMask,
+        [switch]$Invert)
+    If ($Invert) {
+        $on = "0"
+        $off = "1"
+    } else {
+        $on = "1"
+        $off = "0"
+    }
+    If ($CIDRMask -gt 8) {
+        return (Convert-CIDRToBitmask -CIDRMask ($CIDRMask-8) -Invert:$Invert)+$on*8
+    } elseif ($CIDRMask -ge 0) {
+        return ($on*$CIDRMask+$off*(8-$CIDRMask))
     }
 }
 
