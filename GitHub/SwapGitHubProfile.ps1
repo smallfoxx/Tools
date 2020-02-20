@@ -79,6 +79,14 @@ Begin {
             [Parameter(ParameterSetName="New")]
             [switch]$NewProfile)
 
+        If ($Current -and -not (Test-Path $Path -ErrorAction SilentlyContinue)) {
+            $CleanPath = "$ProfilePath\$ProfilePrefix"
+            If (Test-Path $CleanPath) {
+                $Path = $CleanPath
+            }
+        }
+
+        Write-Debug "$ProfileName - $Path"
         $ThisProfile = Get-Item $Path
         $ThisProfile | Add-Member -MemberType NoteProperty -Name ConfigFile "$($ThisProfile.FullName)\$ConfigFile"
         $ThisProfile | Add-Member -MemberType NoteProperty -Name Config -Value (NewGitHubConfigJson)
@@ -95,6 +103,9 @@ Begin {
         }
 
         $ThisProfile.ReloadConfig()
+
+        Write-Debug "$ProfileName - $($ThisProfile.ConfigFile)"
+        Write-Debug "$ProfileName - $($ThisProfile.Config.Name) - $($ThisProfile.ProfileName)" 
 
         If ($Current) {
             $ProfileName = $ThisProfile.ProfileName
@@ -169,10 +180,25 @@ Begin {
         $CurrentProfile = $NewProfile
     }
 
-    $CurrentProfile = NewProfileObj -Path "$ProfilePath\$ProfilePrefix" -Current
+    If ([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).groups -match "S-1-5-32-544")) {
+        $CurrentProfile = NewProfileObj -Path "$ProfilePath\$ProfilePrefix" -Current
 
-    $PossibleProfiles = Get-ChildItem "$ProfilePath\$ProfilePrefix-*" | ForEach-Object {
-        NewProfileObj -ProfileName ($_.BaseName -replace "\A[^-]+-","") -Path $_.FullName
+        $PossibleProfiles = Get-ChildItem "$ProfilePath\$ProfilePrefix-*" | ForEach-Object {
+            NewProfileObj -ProfileName ($_.BaseName -replace "\A[^-]+-","") -Path $_.FullName
+        }
+    } else {
+        Write-Warning "Requires admin mode!"
+        $EXEFile = Get-ChildItem -Path $PSHOME\*.exe -File | Select-Object -first 1
+        $ArgList = @($PSCommandPath)
+        If ($args) { $ArgList += $args }
+        Write-Host "Starting $($EXEFile.FullName) with $($ArgList -join ';')"
+        Start-Process -FilePath $EXEFile.FullName -ArgumentList $ArgList -Verb RunAs 
+        <# Write-Host $PSScriptRoot
+        Write-Host $PSCommandPath
+        Get-Variable -Name PS*
+         #$PSCmdlet.InvokeCommand | fl *
+        #Start-Process - $PSCommandPath #>
+        break 
     }
 }
 
