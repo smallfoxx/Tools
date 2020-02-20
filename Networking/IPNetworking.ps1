@@ -57,7 +57,7 @@ Class FullIP {
         } -SecondValue { if ($args[0]) { $this.Mask = [ipaddress][convert]::ToInt64(("1"*[int]$args[0]),2) } }
         $this | Add-Member ScriptProperty CIDR { if ($this.Mask) { "{0}/{1}" -f $this.Address.IPAddressToString,$this.CIDRMask } } { $this.Address = $args[0] }
         $this | Add-Member ScriptProperty NetworkAddress { if ($this.Mask) { [ipaddress]($this.IPv4Address.Address -band $this.Mask.Address) } }
-        $this | Add-Member ScriptProperty BroadcastAddress { if ($this.Mask) {  [ipaddress]($this.NetworkAddress.address + [convert]::ToInt64(("1"*(32-$this.CIDRMask)+"0"*$this.CIDRMask),2)) } } #); [ipaddress]($this.NetworkAddress.Address + [convert]::ToInt64("1"*(32-$this.CIDRMask)+"0"*$this.CIDRMask)) } }
+        $this | Add-Member ScriptProperty BroadcastAddress { if ($this.Mask) {  [ipaddress]($this.NetworkAddress.address + [convert]::ToInt64(("1"*(32-$this.CIDRMask)+"0"*$this.CIDRMask),2)) } } 
         $this | Add-Member ScriptProperty NetworkAddressCount { if ($this.Mask) { [convert]::ToInt64("1"*(32-$this.CIDRMask),2)+1 } }
         $this | Add-Member ScriptProperty NetworkUsableCount { if ($this.Mask) { $this.NetworkAddressCount-2 } }
         $this | Add-Member ScriptProperty AzureUsableCount { if ($this.Mask) { $this.NetworkUsableCount-3 } }
@@ -65,17 +65,49 @@ Class FullIP {
 }
 
 Function Test-OnNetwork {
+    <#
+    .SYNOPSIS
+    Compare two IP addresses to determine if they're on the same network
+    .DESCRIPTION
+    Takes two IP addresses with at least one having a subnet mask and returns true if they are on the same
+    subnet; false if the are not. If the actual address is needed rather than a boolean response, use the
+    -PassThru parameter to return the IP adddress
+    .INPUTS
+    FullIP
+    .OUTPUTS
+    Boolean
+    FullIP
+    .EXAMPLE
+    Test-OnNetwork -Address "192.168.32.14/25" -RemoteAddress "192.168.32.5"
+    Would return $true as 192.168.32.5 is on the same subnet as 192.168.32.14 with the mask 255.255.255.128
+    .EXAMPLE
+    Get-Content .\IPAddresses.txt | Test-OnNetwork -Address (Get-NetIPAddress | Where-Object { $_.Address } | Select-Object -first 1 -Skip 1) -PassThru
+    Will take the content of the IPAddresses.txt file and compare them against the second network address of
+    the local machine and return the IP address object of those address that are on the network.
+    .LINK
+    https://github.com/smallfoxx/
+    #>
     param(
+        # Local IP address to use for source of test. Should be in CIDR format or IPAddress type with a Subnet mask
         [parameter(ValueFromPipelineByPropertyName=$true,Position=0)]
         [FullIP]$Address,
+        # Remote IP address to test against
         [parameter(ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true,Position=1)]
         [FullIP[]]$RemoteAddress,
+        # Return the IP address if on network rather than just a binary true/false
         [Switch]$PassThru
     )
 
     Process {
         ForEach ($Remote in $RemoteAddress) {
-            If ($Address.IsOnNetwork($Remote)) {
+            If ($Address.Mask) {
+                $OnNetwork = $Address.IsOnNetwork($Remote)
+            } elseif ($Remote.Mask) {
+                $OnNetwork = $Remote.IsOnNetwork($Address)
+            } else {
+                $OnNetwork = $false
+            }
+            If ($OnNetwork) {
                 If ($PassThru) {
                     $Remote
                 } else {
