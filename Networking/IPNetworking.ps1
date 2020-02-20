@@ -57,27 +57,52 @@ Class FullIP {
         } -SecondValue { if ($args[0]) { $this.Mask = [ipaddress][convert]::ToInt64((Convert-CIDRToBitmask -CIDRMask $args[0]),2) } }
         $this | Add-Member ScriptProperty CIDR { if ($this.Mask) { "{0}/{1}" -f $this.Address.IPAddressToString,$this.CIDRMask } } { $this.Address = $args[0] }
         $this | Add-Member ScriptProperty NetworkAddress { if ($this.Mask) { [ipaddress]($this.IPv4Address.Address -band $this.Mask.Address) } }
-        $this | Add-Member ScriptProperty BroadcastAddress { if ($this.Mask) {  [ipaddress]($this.NetworkAddress.address + [convert]::ToInt64((Convert-CIDRToBitmask -CIDRMask $this.CIDRMask -Invert).PadLeft(32,"1"),2)) } } 
+        $this | Add-Member ScriptProperty BroadcastAddress { if ($this.Mask) {  [ipaddress]($this.NetworkAddress.address + [convert]::ToInt64(($this | Convert-CIDRToBitmask -Invert).PadLeft(32,"1"),2)) } } 
         $this | Add-Member ScriptProperty NetworkAddressCount { if ($this.Mask) { [convert]::ToInt64("1"*(32-$this.CIDRMask),2)+1 } }
-        $this | Add-Member ScriptProperty NetworkUsableCount { if ($this.Mask) { $this.NetworkAddressCount-2 } }
-        $this | Add-Member ScriptProperty AzureUsableCount { if ($this.Mask) { $this.NetworkUsableCount-3 } }
+        $this | Add-Member ScriptProperty NetworkUsableCount { if ($this.Mask) { If ($this.CIDRMask -lt 31) { $this.NetworkAddressCount-2 } } }
+        $this | Add-Member ScriptProperty AzureUsableCount { if ($this.Mask) { If ($this.CIDRMask -lt 30) { $this.NetworkUsableCount-3 } } }
     }
 }
 
 Function Convert-CIDRToBitmask {
-    param([int]$CIDRMask,
+    <#
+    .SYNOPSIS
+    Convert CIDR count to bits
+    .DESCRIPTION
+    Bit masks for IPAddress v4 addresses are in 4 bytes arrays where the high byte is on the right and the low byte is on the left, but the bits
+    within the bytes go left to right.  IE: 255.255.252.0 (/22) is actually 00000000111111001111111111111111 (int64: 16580607) 
+    .PARAMETER CIDRMask
+    Bits included in the CIDR mask
+    .PARAMETER Invert
+    Dictates that the inverse values should be returned (often use for broadcast values)
+    #>
+    param(
+        [parameter(ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true,Position=0)]
+        [int]$CIDRMask,
+        [parameter(ValueFromPipelineByPropertyName=$true,Position=1)]
         [switch]$Invert)
-    If ($Invert) {
-        $on = "0"
-        $off = "1"
-    } else {
-        $on = "1"
-        $off = "0"
+    Begin {
+        If ($Invert) {
+            $on = "0"
+            $off = "1"
+        } else {
+            $on = "1"
+            $off = "0"
+        }
     }
-    If ($CIDRMask -gt 8) {
-        return (Convert-CIDRToBitmask -CIDRMask ($CIDRMask-8) -Invert:$Invert)+$on*8
-    } elseif ($CIDRMask -ge 0) {
-        return ($on*$CIDRMask+$off*(8-$CIDRMask))
+
+    Process {
+        $Bitmask = ""
+        
+        For ($BitCount=$CIDRMask; $BitCount -gt 0; $BitCount-=8) {
+            If ($Bitcount -gt 8) {
+                $Bitmask = $on*8 + $Bitmask
+            } else {
+                $Bitmask = ($on*$BitCount).PadRight(8,$off)+$Bitmask
+            }
+        }
+        
+        return $Bitmask.PadLeft(32,$off)
     }
 }
 
