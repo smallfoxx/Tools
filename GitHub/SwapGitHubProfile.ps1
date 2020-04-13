@@ -180,6 +180,22 @@ Begin {
         $CurrentProfile = $NewProfile
     }
 
+    Function Find-GetExe {
+        param([string]$Version,
+        [string]$Path = "$env:USERPROFILE\AppData\Local\GitHubDesktop",
+        [string]$RelativeFilePath = ".\resources\app\git\cmd\git.exe")
+
+        $VersPath = Get-ChildItem $Path | Where-Object { $_.Name -match "app-$Version" } |
+            Sort-Object -Property Name | Select-Object -Last 1 -ExpandProperty FullName
+        If ($VersPath) {
+            $FilePath = "{0}\{1}" -f $VersPath,$RelativeFilePath
+            If (Test-Path $FilePath -ErrorAction SilentlyContinue) {
+                return $FilePath
+            }
+        }
+        
+    }
+
     If ([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).groups -match "S-1-5-32-544")) {
         $CurrentProfile = NewProfileObj -Path "$ProfilePath\$ProfilePrefix" -Current
 
@@ -193,12 +209,18 @@ Begin {
         If ($args) { $ArgList += $args }
         Write-Host "Starting $($EXEFile.FullName) with $($ArgList -join ';')"
         Start-Process -FilePath $EXEFile.FullName -ArgumentList $ArgList -Verb RunAs 
-        <# Write-Host $PSScriptRoot
-        Write-Host $PSCommandPath
-        Get-Variable -Name PS*
-         #$PSCmdlet.InvokeCommand | fl *
-        #Start-Process - $PSCommandPath #>
         break 
+    }
+
+    If (-not (Test-Path $GitExe -ErrorAction SilentlyContinue)) {
+        Write-Error "Unable to find Git executable at '$GitExe'"
+        Do {
+            $Response = Read-Host "Enter Git desktop version [2.4.0] (or leave blank to search)"
+        } Until ($Response -match "^((\d+\.){0,2}\d+)?$")
+        $GitExe = Find-GetExe -Version $Response
+        If (-not ($GitExe)) {
+            throw "Git exe not found [$GitExe]"
+        }
     }
 }
 
