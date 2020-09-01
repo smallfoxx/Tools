@@ -4,6 +4,11 @@ Change profiles for GitHub Desktop
 .DESCRIPTION
 Change login profiles for GitHub Desktop to allow for different accounts.
 .NOTES
+You probably need to update your Script Execution Policy
+(https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies?view=powershell-7)
+Run Powershell as administrator and run:
+Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser
+
 The profiles are swapped by utilizing symbolic directory links to different named profile folders.
 
 If this is the first type running this, create a new profile using:
@@ -47,7 +52,7 @@ Param(
 
     [parameter(ParameterSetName="Swap")]
     #Current version of GIT
-    [string]$GitVer = "2.2.4",
+    [string]$GitVer = "2.5.4",
 
     [parameter(ParameterSetName="Swap")]
     #The path to the executable used for GIT
@@ -55,7 +60,7 @@ Param(
 
     [parameter(ParameterSetName="Swap")]
     #The path to the executable used for GitHub Desktop
-    [string]$GitHubDesktop = "C:\Users\live\AppData\Local\GitHubDesktop\GitHubDesktop.exe",
+    [string]$GitHubDesktop = "$env:USERPROFILE\AppData\Local\GitHubDesktop\GitHubDesktop.exe",
 
     [parameter(ParameterSetName="Swap")]
     #Copies the current profile to a new profile and then swaps to it
