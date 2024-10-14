@@ -58,7 +58,7 @@ Function Read-HostExample {
 
     ------- Example 3: Mask input and as a plaintext string -------
 
-    $pwd_string = Read-HostExample "Enter a Password" -Example "P@ssw0rd" -MaskInput
+    $pwd_string = Read-HostExample "Enter a Password" "P@ssw0rd" -MaskInput
 
     .LINK
     Online Version: https://raw.githubusercontent.com/smallfoxx/Tools/refs/heads/master/Console/UserInput.ps1
@@ -71,15 +71,16 @@ Function Read-HostExample {
     #>
     [cmdletbinding()]
     param(
-        [parameter(ValueFromPipeline,ValueFromPipelineByPropertyName)]
+        [parameter(ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true,Position=0)]
         [string]$Prompt,
-        [parameter(ValueFromPipelineByPropertyName)]
+        [parameter(ValueFromPipelineByPropertyName=$true,Position=1)]
         [alias('Ghost','GhostPrompt')]
         [string]$Example,
         [parameter(ParameterSetName="Default")]
         [switch]$MaskInput,
         [parameter(ParameterSetName="Secure",Mandatory)]
         [switch]$AsSecureString,
+        [parameter(Position=2)]
         [int]$GhostColor=90
     )
 
